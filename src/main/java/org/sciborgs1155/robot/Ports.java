@@ -19,4 +19,9 @@ public final class Ports {
     public static final int FRONT_RIGHT_TURNING = 16;
     public static final int REAR_RIGHT_TURNING = 17;
   }
+
+  public static final class Shooter {
+    public static final int MOTOR = 30;
+    public static final int SHOOTER = 31;
+  }
 }
