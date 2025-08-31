@@ -10,10 +10,12 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import monologue.Logged;
 import org.sciborgs1155.robot.shooter.ShooterConstants.FF;
 import org.sciborgs1155.robot.shooter.ShooterConstants.PID;
+import org.sciborgs1155.robot.Robot;
 
 import static org.sciborgs1155.robot.shooter.ShooterConstants.DEFAULT_VELOCITY;
 import static org.sciborgs1155.robot.shooter.ShooterConstants.MAX_VELOCITY;
 import static org.sciborgs1155.robot.shooter.ShooterConstants.VELOCITY_TOLERANCE;
+
 
 
 public class Shooter extends SubsystemBase implements Logged {
@@ -25,6 +27,15 @@ public class Shooter extends SubsystemBase implements Logged {
       new SimpleMotorFeedforward(FF.kS, FF.kV, FF.kA);
 
   private final PIDController hardwarePIDController = new PIDController(PID.kP, PID.kI, PID.kD);
+
+  public static Shooter create() {
+    if (Robot.isReal()) {
+      return new Shooter(null);
+    } else {
+      return new Shooter(null);
+    }
+
+  }
 
   public Shooter(ShooterIO hardware) {
     this.hardware = hardware;
