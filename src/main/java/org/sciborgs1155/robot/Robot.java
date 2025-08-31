@@ -52,6 +52,7 @@ public class Robot extends CommandRobot implements Logged {
   private final Drive drive = Drive.create();
   private final Vision vision = Vision.create();
   private final Shooter shooter = Shooter.create();
+  private final Pivot pivot = Pivot.create();
 
   // COMMANDS
   @Log.NT private final SendableChooser<Command> autos = Autos.configureAutos(drive);
