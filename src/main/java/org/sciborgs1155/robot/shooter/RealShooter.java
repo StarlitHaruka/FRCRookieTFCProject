@@ -25,7 +25,7 @@ public class RealShooter implements ShooterIO {
   private final SparkFlexConfig config;
 
   public RealShooter(int id, boolean inverted) {
-    motor = new SparkFlex(Ports.Shooter.MOTOR, MotorType.kBrushless);
+    motor = new SparkFlex(Ports.Shooter.TOP_MOTOR, MotorType.kBrushless);
     shooterEncoder = motor.getEncoder();
     config = new SparkFlexConfig();
 
