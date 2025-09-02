@@ -23,9 +23,6 @@ import org.sciborgs1155.lib.SparkUtils;
 import org.sciborgs1155.lib.SparkUtils.Data;
 import org.sciborgs1155.lib.SparkUtils.Sensor;
 
-
-
-
 public class RealPivot implements PivotIO{
 
     private final SparkMax lead;
