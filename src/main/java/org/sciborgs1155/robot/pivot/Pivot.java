@@ -7,12 +7,9 @@ import static org.sciborgs1155.lib.Assertion.EqualityAssertion;
 import static org.sciborgs1155.lib.Assertion.eAssert;
 import static org.sciborgs1155.robot.Constants.PERIOD;
 import static org.sciborgs1155.robot.pivot.PivotConstants.*;
-import static org.sciborgs1155.robot.shooter.ShooterConstants.GEARING;
-import static org.sciborgs1155.robot.vision.VisionConstants.MAX_ANGLE;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ArmFeedforward;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
@@ -23,10 +20,11 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color8Bit;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.PIDCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
+
+import java.security.PublicKey;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.DoubleSupplier;
@@ -37,8 +35,11 @@ import org.sciborgs1155.lib.Test;
 import org.sciborgs1155.robot.Constants;
 import org.sciborgs1155.robot.Robot;
 
+import java.util.Set;
+import java.util.function.Supplier;
 
 public class Pivot {
+
     private final PivotIO hardware;
     private final SysIdRoutine sysId;
 
@@ -74,7 +75,7 @@ public class Pivot {
             new SysIdRoutine(new SysIdRoutine.Config(Volts.per(Second).of(0.5), Volts.of(3), Seconds.of(6)),
             new SysIdRoutine.Mechanism(v -> pivot.setVoltage(v.in(Volts)), null, null));
 
-        pid.reset(MAX_ANGLE);
+        pid.reset(MAX_ANGLE.in(Radians));
         pid.setTolerance(POSITION_TOLERANCE.in(Radians));
 
         SmartDashboard.putData("pivot quasistatic forward", quasistaticForward());
@@ -82,23 +83,28 @@ public class Pivot {
         SmartDashboard.putData("pivot dynamic forward", dynamicForward());
         SmartDashboard.putData("pivot dynamic backward", dynamicBack());
 
-        setDefaultCommand(
-            // run(() -> update(MAX_ANGLE.in(Radians)))
-            //     .until(() -> pid.getGoal().position > MAX_ANGLE.in(Radians))
-            //     .andThen(run(() -> pivot.setVoltage(0)))
-            //     .withName("default pos")
-        );
-
-
-
-
-
-        
-
+        // setDefaultCommand(
+        //     run(() -> update(MAX_ANGLE.in(Radians)))
+        //         .until(() -> pid.getGoal().position > MAX_ANGLE.in(Radians))
+        //         .andThen(run(() -> pivot.setVoltage(0)))
+        //         .withName("default position"));
+    
+        teleop().or(autonomous()).onTrue(Commands.runOnce(() -> pid.reset(hardware.getPosition())));
     }
 
-    public Command quasistaticForward() {}
+    public Command runPivot(DoubleSupplier goalAngle) {
+        return run(() -> update(goalAngle.getAsDouble())).withName("go to").asProxy();
+    }
+
+    public Command runPivot(Angle goal) {
+        return runPivot(() -> goal.in(Radians));
+    }
+        
+
+        
+            public Command quasistaticForward() {}
     public Command quasistaticBack() {}
     public Command dynamicForward() {}
     public Command dynamicBack() {}
 }
+    
