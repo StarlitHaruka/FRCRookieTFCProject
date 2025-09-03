@@ -2,7 +2,7 @@ package org.sciborgs1155.robot.pivot;
 
 import edu.wpi.first.units.measure.Current;
 
-public interface PivotIO {
+public interface PivotIO extends AutoCloseable{
 
     /**
      * sets voltage of a pivot

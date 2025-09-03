@@ -21,5 +21,9 @@ public class NoPivot implements PivotIO{
 
     @Override
     public void setCurrentLimit(Current limit) {}
+
+    @Override
+    public void close() throws Exception {}
+    
     
 }

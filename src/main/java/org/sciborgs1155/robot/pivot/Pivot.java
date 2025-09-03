@@ -39,7 +39,7 @@ import org.sciborgs1155.robot.Robot;
 import java.util.Set;
 import java.util.function.Supplier;
 
-public class Pivot extends SubsystemBase implements Logged{
+public class Pivot extends SubsystemBase implements Logged, AutoCloseable{
 
     private final PivotIO hardware;
     private final SysIdRoutine sysId;
@@ -58,10 +58,10 @@ public class Pivot extends SubsystemBase implements Logged{
      * visualization
      */
     @Log.NT
-  private final PivotVisualizer positionVisualizer = new PivotVisualizer(new Color8Bit(255, 0, 0));
+    private final PivotVisualizer positionVisualizer = new PivotVisualizer(new Color8Bit(255, 0, 0));
 
-  @Log.NT
-  private final PivotVisualizer setpointVisualizer = new PivotVisualizer(new Color8Bit(0, 0, 255));
+    @Log.NT
+    private final PivotVisualizer setpointVisualizer = new PivotVisualizer(new Color8Bit(0, 0, 255));
 
     /**
      * creates a new real/sim pivot depending on whether robot connection is present
@@ -143,6 +143,10 @@ public class Pivot extends SubsystemBase implements Logged{
         return new Rotation3d(0, pid.getGoal().position, 0);
     }
 
+    public Rotation3d setpoint() {
+        return new Rotation3d(0, pid.getSetpoint().position, 0);
+    }
+
     public Transform3d transform() {
         return new Transform3d(AXLE_FROM_CHASSIS, rotation());
     }
@@ -210,9 +214,24 @@ public class Pivot extends SubsystemBase implements Logged{
 
     @Override
     public void periodic() {
-        
+        positionVisualizer.setState(hardware.getPosition());
+        setpointVisualizer.setState(setpoint().getY());
     }
 
+    @Override
+    public void close() throws Exception {
+      positionVisualizer.close();
+      setpointVisualizer.close();
+      hardware.close();
+    }
+
+    public Test test(Angle goal) {
+        Command testCom = runPivot(goal).until(() -> atPos(goal.in(Radians))).withTimeout(2);
+        EqualityAssertion atGoal = 
+        eAssert("pivot test angle (degrees)", () -> goal.in(Degrees), () -> Units.radiansToDegrees(pos()),POSITION_TOLERANCE.in(Degrees));
+        return new Test(testCom, Set.of(atGoal));
+
+    }
 
 }
     

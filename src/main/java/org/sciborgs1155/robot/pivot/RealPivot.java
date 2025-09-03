@@ -147,5 +147,13 @@ public class RealPivot implements PivotIO{
     public void setCurrentLimit(Current limit) {
         //seems to be a deprecated method replaced by a line up top..
     }
+
+    @Override
+    public void close() throws Exception {
+     lead.close();
+     leftBottom.close();
+     rightBottom.close();
+     rightTop.close();
+    }
     
 }

@@ -27,5 +27,11 @@ public class SimPivot implements PivotIO {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'MaxCurrentLimit'");
     }
+
+    @Override
+    public void close() throws Exception {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'close'");
+    }
     
 }
