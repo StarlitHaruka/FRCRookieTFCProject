@@ -5,14 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
 import org.sciborgs1155.lib.FaultLogger.FaultType;
 
 public sealed interface Assertion {
   public void apply(boolean unitTest);
 
   /**
-   * Asserts that a condition is true and reports to FaultLogger.
+   * Asserts that a condition is true, and reports to FaultLogger
    *
    * @param condition
    * @param faultName
@@ -26,7 +25,7 @@ public sealed interface Assertion {
   }
 
   /**
-   * Asserts that two values are equal (with some tolerance) and reports to FaultLogger.
+   * Asserts that two values are equal (with some tolerance), and reports to FaultLogger
    *
    * @param faultName
    * @param expected
@@ -41,14 +40,13 @@ public sealed interface Assertion {
   }
 
   public static record TruthAssertion(
-      BooleanSupplier condition, String faultName, Supplier<String> description)
-      implements Assertion {
+      BooleanSupplier condition, String faultName, String description) implements Assertion {
     @Override
     public void apply(boolean unitTest) {
       if (unitTest) {
-        assertTrue(condition, faultName + ": " + description.get());
+        assertTrue(condition, faultName + ": " + description);
       } else {
-        reportTrue(condition.getAsBoolean(), faultName, description.get());
+        reportTrue(condition.getAsBoolean(), faultName, description);
       }
     }
   }
@@ -70,7 +68,7 @@ public sealed interface Assertion {
    * @return a truth assertion
    */
   public static TruthAssertion tAssert(
-      BooleanSupplier condition, String faultName, Supplier<String> description) {
+      BooleanSupplier condition, String faultName, String description) {
     return new TruthAssertion(condition, faultName, description);
   }
 

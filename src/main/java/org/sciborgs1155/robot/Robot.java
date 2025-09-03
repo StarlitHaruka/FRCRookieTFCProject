@@ -31,6 +31,7 @@ import org.sciborgs1155.lib.InputStream;
 import org.sciborgs1155.lib.Test;
 import org.sciborgs1155.robot.Ports.OI;
 import org.sciborgs1155.robot.commands.Autos;
+import org.sciborgs1155.robot.commands.Shooting;
 import org.sciborgs1155.robot.drive.Drive;
 import org.sciborgs1155.robot.vision.Vision;
 import org.sciborgs1155.robot.shooter.Shooter;
@@ -56,9 +57,13 @@ public class Robot extends CommandRobot implements Logged {
   private final Pivot pivot = Pivot.create();
 
   // COMMANDS
+  private final Shooting shooting = new Shooting(shooter, pivot, Feeder, drive);
+
+  //LOG
   @Log.NT private final SendableChooser<Command> autos = Autos.configureAutos(drive);
 
   @Log.NT private double speedMultiplier = Constants.FULL_SPEED_MULTIPLIER;
+  
 
   /** The robot contains subsystems, OI devices, and commands. */
   public Robot() {

@@ -14,12 +14,12 @@ public class NavXGyro implements GyroIO {
   }
 
   @Override
-  public double rate() {
+  public double getRate() {
     return ahrs.getRate();
   }
 
   @Override
-  public Rotation3d rotation3d() {
+  public Rotation3d getRotation3d() {
     return ahrs.getRotation3d();
   }
 

@@ -12,47 +12,15 @@ import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearAcceleration;
 import edu.wpi.first.units.measure.LinearVelocity;
-import edu.wpi.first.units.measure.Time;
 import java.util.List;
 
-/**
- * Constants for our 2024 MAXSwerve drivetrain. All fields in this file should be updated for the
- * current robot configuration!
- */
 public final class DriveConstants {
-  /** The type of control loop to use when controlling a module's drive motor. */
-  public static enum ControlMode {
-    CLOSED_LOOP_VELOCITY,
-    OPEN_LOOP_VELOCITY;
-  }
-
-  /** The type of modules being used. */
-  public static enum ModuleType {
-    TALON, // Kraken X60 Drive, NEO 550 Turn
-    SPARK; // NEO Vortex Drive, NEO 550 Turn
-  }
-
-  // TODO: Change central drivetrain constants as needed.
-
-  // The type of module on the chassis
-  public static final ModuleType TYPE = ModuleType.SPARK;
-
-  // The control loop used by all of the modules when driving
-  public static final ControlMode DRIVE_MODE = ControlMode.OPEN_LOOP_VELOCITY;
-
-  // Rate at which sensors update periodicially
-  public static final Time SENSOR_PERIOD = Seconds.of(0.02);
-
   // Distance between centers of right and left wheels on robot
   public static final Distance TRACK_WIDTH = Meters.of(0.5715);
   // Distance between front and back wheels on robot
   public static final Distance WHEEL_BASE = Meters.of(0.5715);
-  // The radius of any swerve wheel
-  public static final Distance WHEEL_RADIUS = Inches.of(1.5);
   // Distance from the center to any wheel of the robot
   public static final Distance RADIUS = TRACK_WIDTH.div(2).times(Math.sqrt(2));
-  // Coefficient of friction between the drive wheel and the carpet.
-  public static final double WHEEL_COF = 1.0;
   // Robot width with bumpers
   public static final Distance CHASSIS_WIDTH = Inches.of(32.645);
 
@@ -86,7 +54,6 @@ public final class DriveConstants {
 
   public static final Rotation3d GYRO_OFFSET = new Rotation3d(0, 0, Math.PI);
 
-  // TODO: Change ALL characterization constants for each unique robot as needed.
   public static final class Translation {
     public static final double P = 3.0;
     public static final double I = 0.0;
@@ -122,31 +89,21 @@ public final class DriveConstants {
       public static final Current CURRENT_LIMIT = Amps.of(50);
 
       public static final class PID {
-        public static final class SPARK {
-          public static final double P = 3.2;
-          public static final double I = 0.0;
-          public static final double D = 0.0;
-        }
-
-        public static final class TALON {
-          public static final double P = 3.2;
-          public static final double I = 0.0;
-          public static final double D = 0.0;
-        }
+        public static final double P = 3.2;
+        public static final double I = 0.0;
+        public static final double D = 0.0;
       }
 
       public static final class FF {
-        public static final class SPARK {
-          public static final double S = 0.088468;
-          public static final double V = 2.1314;
-          public static final double A = 0.33291;
-        }
-
-        public static final class TALON {
-          public static final double S = 0.088468;
-          public static final double V = 2.1314;
-          public static final double A = 0.33291;
-        }
+        // s: 0.21474, 0.23963, 0.16188, 0.13714
+        // v: 2.115, 2.0681, 2.1498, 2.0948
+        // a linear: 0.17586, 0.13707, 0.23915, 0.26842
+        // a rotation: 0.37587, 0.20079
+        // 2 has 0.55 R^2
+        public static final double S = 0.23963;
+        public static final double V = 2.0681;
+        public static final double kA_linear = 0.205;
+        public static final double kA_angular = 0.376;
       }
     }
 

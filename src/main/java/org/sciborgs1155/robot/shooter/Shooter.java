@@ -6,19 +6,25 @@ import static edu.wpi.first.units.Units.Seconds;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import monologue.Annotations.Log;
 import monologue.Logged;
 import org.sciborgs1155.robot.shooter.ShooterConstants.FF;
 import org.sciborgs1155.robot.shooter.ShooterConstants.PID;
 import org.sciborgs1155.robot.Robot;
+import org.sciborgs1155.robot.commands.Shooting;
 
 import static org.sciborgs1155.robot.shooter.ShooterConstants.DEFAULT_VELOCITY;
 import static org.sciborgs1155.robot.shooter.ShooterConstants.MAX_VELOCITY;
 import static org.sciborgs1155.robot.shooter.ShooterConstants.VELOCITY_TOLERANCE;
 
+import java.util.function.DoubleSupplier;
 
 
-public class Shooter extends SubsystemBase implements Logged {
+
+public class Shooter extends SubsystemBase implements Logged, AutoCloseable {
   private final ShooterIO hardware;
 
   private double setpoint;
@@ -45,12 +51,39 @@ public class Shooter extends SubsystemBase implements Logged {
     setDefaultCommand(run(() -> update(0)));
   }
 
+  public Command runShooter(double velocity) {
+    return runShooter(() -> velocity);
+  }
+
+    @Log.NT
+  public double tangentialVelocity() {
+    return Shooting.flywheelToNoteSpeed(rotationalVelocity());
+  }
+
+  public double rotationalVelocity() {
+    return (topVelocity()) / 2.0;
+  }
+
+
   public void setVoltage(double voltage) {
     hardware.setVoltage(voltage);
   }
 
   public double velocity() {
     return hardware.velocity();
+  }
+
+  public boolean atVelocity(double velocity) {
+    return Math.abs(velocity - topVelocity()) < VELOCITY_TOLERANCE.in(RadiansPerSecond);
+  }
+
+    @Log.NT
+  public double topVelocity() {
+    return hardware.velocity();
+  }
+
+  public Command runShooter(DoubleSupplier vel) {
+    return run(() -> update(vel.getAsDouble())).withName("running shooter");
   }
 
   public void update(double velocitySetpoint) {
@@ -66,6 +99,13 @@ public class Shooter extends SubsystemBase implements Logged {
     hardware.setVoltage(MathUtil.clamp(FF + FB, -12, 12));
     setpoint = velocity;
   }
+
+  @Override
+  public void close() throws Exception {
+    hardware.close();
+  }
+
+  
 
 
   

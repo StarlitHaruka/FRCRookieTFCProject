@@ -5,9 +5,7 @@ import static org.sciborgs1155.lib.FaultLogger.*;
 import static org.sciborgs1155.robot.drive.DriveConstants.ModuleConstants.COUPLING_RATIO;
 
 import com.revrobotics.RelativeEncoder;
-import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkAbsoluteEncoder;
-import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController;
@@ -20,14 +18,12 @@ import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import java.util.Set;
 import monologue.Annotations.Log;
 import org.sciborgs1155.lib.SparkUtils;
 import org.sciborgs1155.lib.SparkUtils.Data;
 import org.sciborgs1155.lib.SparkUtils.Sensor;
-import org.sciborgs1155.robot.drive.DriveConstants.ControlMode;
 import org.sciborgs1155.robot.drive.DriveConstants.ModuleConstants.Driving;
 import org.sciborgs1155.robot.drive.DriveConstants.ModuleConstants.Turning;
 
@@ -47,13 +43,12 @@ public class SparkModule implements ModuleIO {
 
   private final Rotation2d angularOffset;
 
+  private final String name;
+
   private double lastPosition;
   private double lastVelocity;
-  private Rotation2d lastRotation;
 
   @Log.NT private SwerveModuleState setpoint = new SwerveModuleState();
-
-  private final String name;
 
   public SparkModule(int drivePort, int turnPort, Rotation2d angularOffset, String name) {
 
@@ -62,8 +57,7 @@ public class SparkModule implements ModuleIO {
     driveMotor = new SparkFlex(drivePort, MotorType.kBrushless);
     driveEncoder = driveMotor.getEncoder();
     drivePID = driveMotor.getClosedLoopController();
-    driveFF =
-        new SimpleMotorFeedforward(Driving.FF.SPARK.S, Driving.FF.SPARK.V, Driving.FF.SPARK.A);
+    driveFF = new SimpleMotorFeedforward(Driving.FF.S, Driving.FF.V, Driving.FF.kA_linear);
     driveMotorConfig = new SparkFlexConfig();
 
     check(
@@ -74,7 +68,7 @@ public class SparkModule implements ModuleIO {
     driveMotorConfig.apply(
         driveMotorConfig
             .closedLoop
-            .pid(Driving.PID.SPARK.P, Driving.PID.SPARK.I, Driving.PID.SPARK.D)
+            .pid(Driving.PID.P, Driving.PID.I, Driving.PID.D)
             .feedbackSensor(ClosedLoopConfig.FeedbackSensor.kAbsoluteEncoder));
 
     driveMotorConfig.apply(
@@ -126,14 +120,14 @@ public class SparkModule implements ModuleIO {
             .idleMode(IdleMode.kBrake)
             .smartCurrentLimit((int) Turning.CURRENT_LIMIT.in(Amps)));
 
-    turnMotorConfig.apply(turnMotorConfig.encoder.inverted(true));
+    turnMotorConfig.apply(turnMotorConfig.absoluteEncoder.inverted(true));
 
     turnMotorConfig.apply(
         turnMotorConfig
-            .encoder
+            .absoluteEncoder
             .positionConversionFactor(Turning.POSITION_FACTOR.in(Radians))
             .velocityConversionFactor(Turning.VELOCITY_FACTOR.in(RadiansPerSecond))
-            .uvwAverageDepth(2));
+            .averageDepth(2));
 
     turnMotorConfig.apply(
         SparkUtils.getSignalsConfigurationFrameStrategy(
@@ -153,11 +147,6 @@ public class SparkModule implements ModuleIO {
 
     this.angularOffset = angularOffset;
     this.name = name;
-  }
-
-  @Override
-  public String name() {
-    return name;
   }
 
   @Override
@@ -188,67 +177,12 @@ public class SparkModule implements ModuleIO {
 
   @Override
   public Rotation2d rotation() {
-    lastRotation =
-        SparkUtils.wrapCall(
-                turnMotor,
-                Rotation2d.fromRadians(turningEncoder.getPosition()).minus(angularOffset))
-            .orElse(lastRotation);
-    return lastRotation;
-  }
-
-  @Override
-  public SwerveModuleState state() {
-    return new SwerveModuleState(driveVelocity(), rotation());
-  }
-
-  @Override
-  public SwerveModulePosition position() {
-    return new SwerveModulePosition(drivePosition(), rotation());
-  }
-
-  @Override
-  public SwerveModuleState desiredState() {
-    return setpoint;
+    return Rotation2d.fromRadians(turningEncoder.getPosition()).minus(angularOffset);
   }
 
   @Override
   public void resetEncoders() {
     driveEncoder.setPosition(0);
-  }
-
-  @Override
-  public void setDriveSetpoint(double velocity) {
-    drivePID.setReference(
-        velocity, ControlType.kVelocity, ClosedLoopSlot.kSlot0, driveFF.calculate(velocity));
-  }
-
-  @Override
-  public void setTurnSetpoint(double angle) {
-    turnPID.setReference(angle, ControlType.kPosition);
-  }
-
-  @Override
-  public void updateSetpoint(SwerveModuleState setpoint, ControlMode mode) {
-    // Optimize the reference state to avoid spinning further than 90 degrees
-    setpoint.optimize(rotation());
-    // Scale setpoint by cos of turning error to reduce tread wear
-    setpoint.speedMetersPerSecond *= setpoint.angle.minus(rotation()).getCos();
-
-    if (mode == ControlMode.OPEN_LOOP_VELOCITY) {
-      setDriveVoltage(driveFF.calculate(setpoint.speedMetersPerSecond));
-    } else {
-      setDriveSetpoint(setpoint.speedMetersPerSecond);
-    }
-
-    setTurnSetpoint(setpoint.angle.getRadians());
-    this.setpoint = setpoint;
-  }
-
-  @Override
-  public void updateInputs(Rotation2d angle, double voltage) {
-    setpoint.angle = angle;
-    setDriveVoltage(voltage);
-    setTurnSetpoint(angle.getRadians());
   }
 
   @Override
