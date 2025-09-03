@@ -1,5 +1,7 @@
 package org.sciborgs1155.robot.pivot;
 
+import edu.wpi.first.units.measure.Current;
+
 public interface PivotIO {
 
     /**
@@ -26,6 +28,6 @@ public interface PivotIO {
      *  once i understand it
      * @param limit
      */
-    public void MaxCurrentLimit(double limit);
+    public void setCurrentLimit(Current limit);
 
 }

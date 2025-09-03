@@ -144,7 +144,7 @@ public class RealPivot implements PivotIO{
     }
 
     @Override
-    public void MaxCurrentLimit(double limit) {
+    public void setCurrentLimit(Current limit) {
         //seems to be a deprecated method replaced by a line up top..
     }
     

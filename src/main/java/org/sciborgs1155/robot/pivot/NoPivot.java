@@ -2,6 +2,8 @@ package org.sciborgs1155.robot.pivot;
 
 import static edu.wpi.first.units.Units.Radians;
 
+import edu.wpi.first.units.measure.Current;
+
 public class NoPivot implements PivotIO{
 
     @Override
@@ -18,6 +20,6 @@ public class NoPivot implements PivotIO{
     }
 
     @Override
-    public void MaxCurrentLimit(double limit) {}
+    public void setCurrentLimit(Current limit) {}
     
 }

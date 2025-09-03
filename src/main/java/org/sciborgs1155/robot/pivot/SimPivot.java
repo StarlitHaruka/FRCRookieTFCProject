@@ -1,5 +1,7 @@
 package org.sciborgs1155.robot.pivot;
 
+import edu.wpi.first.units.measure.Current;
+
 public class SimPivot implements PivotIO {
 
     @Override
@@ -21,7 +23,7 @@ public class SimPivot implements PivotIO {
     }
 
     @Override
-    public void MaxCurrentLimit(double limit) {
+    public void setCurrentLimit(Current limit) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'MaxCurrentLimit'");
     }
