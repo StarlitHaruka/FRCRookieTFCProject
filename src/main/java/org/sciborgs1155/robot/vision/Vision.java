@@ -1,6 +1,5 @@
 package org.sciborgs1155.robot.vision;
 
-import static org.sciborgs1155.robot.Constants.*;
 import static org.sciborgs1155.robot.vision.VisionConstants.*;
 
 import edu.wpi.first.math.Matrix;
@@ -26,6 +25,7 @@ import org.photonvision.simulation.VisionSystemSim;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
 import org.sciborgs1155.lib.FaultLogger;
+import org.sciborgs1155.robot.Constants.Field;
 import org.sciborgs1155.robot.Robot;
 
 public class Vision implements Logged {
@@ -40,13 +40,13 @@ public class Vision implements Logged {
 
   private VisionSystemSim visionSim;
 
-  /** A factory to create new vision classes with our two configured cameras. */
+  /** A factory to create new vision classes with our two configured cameras */
   public static Vision create() {
-    return new Vision(BACK_LEFT_CAMERA, BACK_RIGHT_CAMERA, FRONT_LEFT_CAMERA, FRONT_RIGHT_CAMERA);
+    return new Vision(BACK_LEFT_CAMERA, BACK_RIGHT_CAMERA);
   }
 
   public static Vision none() {
-    return new Vision(null);
+    return new Vision();
   }
 
   public Vision(CameraConfig... configs) {
@@ -101,31 +101,10 @@ public class Vision implements Logged {
    * @return An {@link EstimatedRobotPose} with an estimated pose, estimate timestamp, and targets
    *     used for estimation.
    */
-  public PoseEstimate[] estimatedGlobalPoses() {
+  public PoseEstimate[] getEstimatedGlobalPoses() {
     List<PoseEstimate> estimates = new ArrayList<>();
     for (int i = 0; i < estimators.length; i++) {
-      var unread = cameras[i].getAllUnreadResults();
-      PhotonPipelineResult result;
-      if (unread.size() > 1) {
-        // gets the latest result if there are multiple unread results
-        int maxIndex = 0;
-        double max = 0;
-        int unreadLength = unread.size();
-        for (int ie = 0; ie < unreadLength; ie++) {
-          double temp = unread.get(ie).getTimestampSeconds();
-          if (temp > max) {
-            max = temp;
-            maxIndex = ie;
-          }
-        }
-        result = unread.get(maxIndex);
-        lastResults[i] = result;
-      } else if (unread.size() == 1) {
-        result = unread.get(0);
-        lastResults[i] = result;
-      } else {
-        result = lastResults[i];
-      }
+      var result = cameras[i].getLatestResult();
       var estimate = estimators[i].update(result);
       log("estimates present " + i, estimate.isPresent());
       estimate
@@ -138,7 +117,8 @@ public class Vision implements Logged {
           .ifPresent(
               e ->
                   estimates.add(
-                      new PoseEstimate(e, estimationStdDevs(e.estimatedPose.toPose2d(), result))));
+                      new PoseEstimate(
+                          e, getEstimationStdDevs(e.estimatedPose.toPose2d(), result))));
     }
     return estimates.toArray(PoseEstimate[]::new);
   }
@@ -150,8 +130,8 @@ public class Vision implements Logged {
    */
   @Log.NT
   public Pose3d[] getSeenTags() {
-    return Arrays.stream(lastResults)
-        .flatMap(c -> c.targets.stream())
+    return Arrays.stream(cameras)
+        .flatMap(c -> c.getLatestResult().targets.stream())
         .map(PhotonTrackedTarget::getFiducialId)
         .map(TAG_LAYOUT::getTagPose)
         .map(Optional::get)
@@ -165,7 +145,7 @@ public class Vision implements Logged {
    *
    * @param estimatedPose The estimated pose to guess standard deviations for.
    */
-  public Matrix<N3, N1> estimationStdDevs(
+  public Matrix<N3, N1> getEstimationStdDevs(
       Pose2d estimatedPose, PhotonPipelineResult pipelineResult) {
     var estStdDevs = VisionConstants.SINGLE_TAG_STD_DEVS;
     var targets = pipelineResult.getTargets();

@@ -6,7 +6,6 @@ import static org.sciborgs1155.robot.intake.IntakeConstants.INTAKE_SPEED;
 
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.units.measure.Power;
 import edu.wpi.first.wpilibj.event.EventLoop;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -73,6 +72,7 @@ public class Intake extends SubsystemBase implements AutoCloseable, Logged{
         .debounce(DEBOUNCE_TIME.in(Seconds), DebounceType.kFalling);
     }
 
+    @Log.NT
     public boolean stall() {
         return hardware.current() > DCMotor.getNeoVortex(1).stallCurrentAmps;
     }

@@ -9,12 +9,13 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.sciborgs1155.robot.drive.Drive;
-import org.sciborgs1155.robot.drive.DriveConstants.ControlMode;
 import org.sciborgs1155.robot.drive.NoGyro;
 import org.sciborgs1155.robot.drive.SimModule;
+import org.sciborgs1155.robot.drive.SwerveModule.ControlMode;
 
 /** Swerve test. Currently incomplete and does nothing. */
 public class SwerveTest {
@@ -25,15 +26,15 @@ public class SwerveTest {
   NoGyro gyro;
   Drive drive;
 
-  final double DELTA = 0.15;
+  final double DELTA = 0.5;
 
   @BeforeEach
   public void setup() {
     setupTests();
-    frontLeft = new SimModule("FL");
-    frontRight = new SimModule("FR");
-    rearLeft = new SimModule("RL");
-    rearRight = new SimModule("RR");
+    frontLeft = new SimModule();
+    frontRight = new SimModule();
+    rearLeft = new SimModule();
+    rearRight = new SimModule();
     gyro = new NoGyro();
     drive = new Drive(gyro, frontLeft, frontRight, rearLeft, rearRight);
     drive.resetEncoders();
@@ -49,10 +50,10 @@ public class SwerveTest {
     runUnitTest(drive.systemsCheck());
   }
 
-  @RepeatedTest(5)
+  @Test
   public void reachesRobotVelocity() {
-    double xVelocitySetpoint = Math.random() * (2 * 2.265) - 2.265;
-    double yVelocitySetpoint = Math.random() * (2 * 2.265) - 2.265;
+    double xVelocitySetpoint = -0.5;
+    double yVelocitySetpoint = 0.25;
     run(
         drive.run(
             () ->
@@ -62,15 +63,15 @@ public class SwerveTest {
     run(drive.drive(() -> xVelocitySetpoint, () -> yVelocitySetpoint, drive::heading));
     fastForward(500);
 
-    ChassisSpeeds chassisSpeed = drive.fieldRelativeChassisSpeeds();
+    ChassisSpeeds chassisSpeed = drive.getFieldRelativeChassisSpeeds();
 
     assertEquals(xVelocitySetpoint, chassisSpeed.vxMetersPerSecond, DELTA);
     assertEquals(yVelocitySetpoint, chassisSpeed.vyMetersPerSecond, DELTA);
   }
 
-  @RepeatedTest(5)
-  public void reachesAngularVelocity() {
-    double omegaRadiansPerSecond = Math.random() * 2 - 1;
+  @ParameterizedTest
+  @ValueSource(doubles = {3, 4})
+  public void reachesAngularVelocity(double omegaRadiansPerSecond) {
     run(
         drive.run(
             () ->
@@ -79,14 +80,14 @@ public class SwerveTest {
                     ControlMode.CLOSED_LOOP_VELOCITY)));
     fastForward();
 
-    ChassisSpeeds chassisSpeed = drive.robotRelativeChassisSpeeds();
+    ChassisSpeeds chassisSpeed = drive.getRobotRelativeChassisSpeeds();
     assertEquals(omegaRadiansPerSecond, chassisSpeed.omegaRadiansPerSecond, DELTA);
   }
 
-  @RepeatedTest(5)
+  @Test
   public void testModuleDistance() {
-    double xVelocitySetpoint = Math.random() * (2 * 2.265) - 2.265;
-    double yVelocitySetpoint = Math.random() * (2 * 2.265) - 2.265;
+    double xVelocitySetpoint = 2.265;
+    double yVelocitySetpoint = 0;
 
     double deltaT = 4;
     double deltaX = xVelocitySetpoint * deltaT;

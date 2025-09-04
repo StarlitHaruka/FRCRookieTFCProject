@@ -23,10 +23,6 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-
-import java.security.PublicKey;
-import java.time.Period;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.DoubleSupplier;
 import monologue.Annotations.Log;
@@ -36,8 +32,6 @@ import org.sciborgs1155.lib.Test;
 import org.sciborgs1155.robot.Constants;
 import org.sciborgs1155.robot.Robot;
 
-import java.util.Set;
-import java.util.function.Supplier;
 
 public class Pivot extends SubsystemBase implements Logged, AutoCloseable{
 

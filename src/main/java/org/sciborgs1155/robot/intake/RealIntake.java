@@ -1,7 +1,6 @@
 package org.sciborgs1155.robot.intake;
 
 import static edu.wpi.first.units.Units.Amps;
-import static edu.wpi.first.units.Units.Second;
 import static edu.wpi.first.units.Units.Seconds;
 import static org.sciborgs1155.lib.FaultLogger.check;
 import static org.sciborgs1155.lib.FaultLogger.register;
@@ -34,7 +33,7 @@ public class RealIntake implements IntakeIO{
         config.apply(SparkUtils.getStatusConfigurationOfNothingFrameStrategy());
         config.apply(config.inverted(true));
         config.apply(config.idleMode(IdleMode.kBrake).smartCurrentLimit((int) CURRENT_LIMIT.in(Amps)));
-        config.apply(config.openLoopRampRate(RAMP_TIME.in(Second)));
+        config.apply(config.openLoopRampRate(RAMP_TIME.in(Seconds)));
 
         check(spark, spark.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters));
 

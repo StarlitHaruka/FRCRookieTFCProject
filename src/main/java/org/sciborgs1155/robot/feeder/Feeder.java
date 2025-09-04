@@ -19,6 +19,7 @@ import org.sciborgs1155.robot.commands.NoteVisualizer;
 
 public class Feeder extends SubsystemBase implements Logged, AutoCloseable{
 
+    @Log.NT
     private final FeederIO feeder;
 
     /**
@@ -83,6 +84,7 @@ public class Feeder extends SubsystemBase implements Logged, AutoCloseable{
         .debounce(DEBOUNCE_TIME.in(Seconds), DebounceType.kFalling);
     }
 
+    @Log.NT
     public boolean stall() {
         return feeder.current() > DCMotor.getNeoVortex(1).stallCurrentAmps;
     }

@@ -1,26 +1,31 @@
 package org.sciborgs1155.robot;
 
 import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Second;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.wpilibj2.command.button.RobotModeTriggers.*;
 import static org.sciborgs1155.robot.Constants.DEADBAND;
 import static org.sciborgs1155.robot.Constants.PERIOD;
-import static org.sciborgs1155.robot.drive.DriveConstants.*;
+import static org.sciborgs1155.robot.drive.DriveConstants.MAX_ANGULAR_ACCEL;
+import static org.sciborgs1155.robot.drive.DriveConstants.MAX_SPEED;
+import static org.sciborgs1155.robot.drive.DriveConstants.TELEOP_ANGULAR_SPEED;
+import static org.sciborgs1155.robot.intake.IntakeConstants.INTAKE_FAST_PERIOD;
+import static org.sciborgs1155.robot.pivot.PivotConstants.AMP_ANGLE;
+import static org.sciborgs1155.robot.pivot.PivotConstants.STARTING_ANGLE;
+import static org.sciborgs1155.robot.shooter.ShooterConstants.AMP_VELOCITY;
 
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import java.util.Set;
 import monologue.Annotations.Log;
 import monologue.Logged;
 import monologue.Monologue;
@@ -28,66 +33,81 @@ import org.littletonrobotics.urcl.URCL;
 import org.sciborgs1155.lib.CommandRobot;
 import org.sciborgs1155.lib.FaultLogger;
 import org.sciborgs1155.lib.InputStream;
+import org.sciborgs1155.lib.SparkUtils;
 import org.sciborgs1155.lib.Test;
 import org.sciborgs1155.robot.Ports.OI;
-import org.sciborgs1155.robot.commands.Autos;
+import org.sciborgs1155.robot.commands.Alignment;
+// import org.sciborgs1155.robot.commands.Autos;
+import org.sciborgs1155.robot.commands.NoteVisualizer;
 import org.sciborgs1155.robot.commands.Shooting;
 import org.sciborgs1155.robot.drive.Drive;
-import org.sciborgs1155.robot.vision.Vision;
-import org.sciborgs1155.robot.shooter.Shooter;
-import org.sciborgs1155.robot.pivot.Pivot;
+import org.sciborgs1155.robot.feeder.Feeder;
+import org.sciborgs1155.robot.intake.Intake;
 
-/**
- * This class is where the bulk of the robot should be declared. Since Command-based is a
- * "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot}
- * periodic methods (other than the scheduler calls). Instead, the structure of the robot (including
- * subsystems, commands, and trigger mappings) should be declared here.
- */
+import org.sciborgs1155.robot.pivot.Pivot;
+import org.sciborgs1155.robot.pivot.PivotConstants;
+import org.sciborgs1155.robot.shooter.Shooter;
+import org.sciborgs1155.robot.shooter.ShooterConstants;
+import org.sciborgs1155.robot.vision.Vision;
+
+
 public class Robot extends CommandRobot implements Logged {
-  // INPUT DEVICES
+
+  // input
   private final CommandXboxController operator = new CommandXboxController(OI.OPERATOR);
   private final CommandXboxController driver = new CommandXboxController(OI.DRIVER);
 
-  private final PowerDistribution pdh = new PowerDistribution();
-
   // SUBSYSTEMS
   private final Drive drive = Drive.create();
-  private final Vision vision = Vision.create();
   private final Shooter shooter = Shooter.create();
   private final Pivot pivot = Pivot.create();
+  private final Feeder feeder = Feeder.create();
+  private final Intake intake = Intake.create();
 
-  // COMMANDS
-  private final Shooting shooting = new Shooting(shooter, pivot, Feeder, drive);
 
-  //LOG
-  @Log.NT private final SendableChooser<Command> autos = Autos.configureAutos(drive);
+  private final PowerDistribution pdh = new PowerDistribution();
+
+
+  private final Vision vision = Vision.none(); // NONE BECAUSE VISION IS FUNNY
+
+  // commands
+  private final Shooting shooting = new Shooting(shooter, pivot, feeder, drive);
+  private final Alignment alignment = new Alignment(drive, pivot);
 
   @Log.NT private double speedMultiplier = Constants.FULL_SPEED_MULTIPLIER;
-  
 
-  /** The robot contains subsystems, OI devices, and commands. */
   public Robot() {
     super(PERIOD.in(Seconds));
     configureGameBehavior();
     configureBindings();
   }
 
-  /** Configures basic behavior for different periods during the game. */
+  /** Configures basic behavior during different parts of the game. */
   private void configureGameBehavior() {
-    // TODO: Add configs for all additional libraries, components, intersubsystem interaction
-    // Configure logging with DataLogManager, Monologue, URCL, and FaultLogger
+    // Configure logging with DataLogManager, Monologue, and FailureManagement
     DataLogManager.start();
     Monologue.setupMonologue(this, "/Robot", false, true);
     addPeriodic(Monologue::updateAll, PERIOD.in(Seconds));
     addPeriodic(FaultLogger::update, 2);
+    addPeriodic(
+        () -> log("dist", Shooting.translationToSpeaker(drive.pose().getTranslation()).getNorm()),
+        kDefaultPeriod);
 
     SmartDashboard.putData(CommandScheduler.getInstance());
     // Log PDH
     SmartDashboard.putData("PDH", pdh);
-    FaultLogger.register(pdh);
+    // addPeriodic(() -> log("current", FakePDH.update()), PERIOD.in(Seconds));
 
     // Configure pose estimation updates every tick
-    addPeriodic(() -> drive.updateEstimates(vision.estimatedGlobalPoses()), PERIOD.in(Seconds));
+    addPeriodic(() -> drive.updateEstimates(vision.getEstimatedGlobalPoses()), PERIOD.in(Seconds));
+
+    // polls intake at faster speed
+    addPeriodic(intake::pollTrigger, INTAKE_FAST_PERIOD.in(Seconds));
+
+    for (var r : SparkUtils.getRunnables()) {
+      addPeriodic(r, 5);
+    }
+    // addPeriodic(SparkUtils::update, PERIOD.in(Seconds));
 
     RobotController.setBrownoutVoltage(6.0);
 
@@ -98,16 +118,20 @@ public class Robot extends CommandRobot implements Logged {
     } else {
       DriverStation.silenceJoystickConnectionWarning(true);
       addPeriodic(() -> vision.simulationPeriodic(drive.pose()), PERIOD.in(Seconds));
+      NoteVisualizer.setSuppliers(
+          drive::pose,
+          shooting::shooterPose,
+          drive::getFieldRelChassisSpeeds,
+          shooter::tangentialVelocity);
+      NoteVisualizer.startPublishing();
     }
   }
 
-  /** Configures trigger -> command bindings. */
+  /** Configures subsystem default commands & trigger -> command bindings. */
   private void configureBindings() {
-    // x and y are switched: we use joystick Y axis to control field x motion
-    InputStream x = InputStream.of(driver::getLeftY).negate();
-    InputStream y = InputStream.of(driver::getLeftX).negate();
+    InputStream x = InputStream.of(driver::getLeftX).negate();
+    InputStream y = InputStream.of(driver::getLeftY).negate();
 
-    // Apply speed multiplier, deadband, square inputs, and scale translation to max speed
     InputStream r =
         InputStream.hypot(x, y)
             .log("Robot/raw joystick")
@@ -120,11 +144,9 @@ public class Robot extends CommandRobot implements Logged {
 
     InputStream theta = InputStream.atan(x, y);
 
-    // Split x and y components of translation input
     x = r.scale(theta.map(Math::cos)); // .rateLimit(MAX_ACCEL.in(MetersPerSecondPerSecond));
     y = r.scale(theta.map(Math::sin)); // .rateLimit(MAX_ACCEL.in(MetersPerSecondPerSecond));
 
-    // Apply speed multiplier, deadband, square inputs, and scale rotation to max teleop speed
     InputStream omega =
         InputStream.of(driver::getRightX)
             .negate()
@@ -137,10 +159,6 @@ public class Robot extends CommandRobot implements Logged {
 
     drive.setDefaultCommand(drive.drive(x, y, omega));
 
-    autonomous().whileTrue(Commands.defer(autos::getSelected, Set.of(drive)).asProxy());
-
-    test().whileTrue(systemsCheck());
-
     driver.b().whileTrue(drive.zeroHeading());
     driver
         .leftBumper()
@@ -148,16 +166,60 @@ public class Robot extends CommandRobot implements Logged {
         .onTrue(Commands.runOnce(() -> speedMultiplier = Constants.SLOW_SPEED_MULTIPLIER))
         .onFalse(Commands.runOnce(() -> speedMultiplier = Constants.FULL_SPEED_MULTIPLIER));
 
-    // TODO: Add any additional bindings.
+    // driver manual shooter (povUp)
+    driver
+        .povUp()
+        .whileTrue(shooter.runShooter(-ShooterConstants.IDLE_VELOCITY.in(RadiansPerSecond)));
+
+    // driver intake button
+    driver
+        .leftTrigger()
+        .whileTrue(intake.intake().deadlineFor(feeder.halfforward()));
+
+    // move wheels
+    driver
+        .leftBumper()
+        .whileTrue(shooting.shoot(ShooterConstants.DEFAULT_VELOCITY));
+    
+    driver.x().whileTrue(pivot.runPivot(Radians.of(0)));
+
+    // intake (right trigger / top left bump)
+    operator
+        .leftTrigger()
+        .whileTrue(intake.intake().deadlineFor(feeder.halfforward()));
+
+    // operator feed (left trigger) underfeeding
+    operator
+        .leftBumper()
+        .whileTrue(
+            shooting.PivotShoot(
+                PivotConstants.UNDERFEED_ANGLE, ShooterConstants.DEFAULT_VELOCITY));
+
+    // operator note-unstuck (right bump)
+    operator.y().whileTrue(pivot.runPivot(Radians.of(0.8)).alongWith(intake.backward()));
+
+    operator.x().whileTrue(intake.backward().alongWith(feeder.backward()));
+
+    // operator manual amp (povUp)
+    operator
+        .povUp()
+        .whileTrue(shooting.PivotShoot(AMP_ANGLE, AMP_VELOCITY));
+
+
+    // operator manual pivot (a)
+    operator
+        .a()
+        .toggleOnTrue(
+            pivot
+                .manual(
+                    InputStream.of(operator::getLeftY).negate().deadband(Constants.DEADBAND, 1))
+                .deadlineFor(Commands.idle(shooter)));
+
+
+    intake.hasNote().onTrue(rumble(RumbleType.kLeftRumble, 0.3));
+    feeder.noteAtShooter().onFalse(rumble(RumbleType.kRightRumble, 0.3));
   }
 
-  /**
-   * Command factory to make both controllers rumble.
-   *
-   * @param rumbleType The area of the controller to rumble.
-   * @param strength The intensity of the rumble.
-   * @return The command to rumble both controllers.
-   */
   public Command rumble(RumbleType rumbleType, double strength) {
     return Commands.runOnce(
             () -> {
@@ -172,16 +234,18 @@ public class Robot extends CommandRobot implements Logged {
             });
   }
 
-  public Command systemsCheck() {
-    return Test.toCommand(drive.systemsCheck()).withName("Test Mechanisms");
-  }
 
   @Override
   public void close() {
     super.close();
     try {
+      intake.close();
+      shooter.close();
+      feeder.close();
+      pivot.close();
       drive.close();
     } catch (Exception e) {
     }
   }
+
 }

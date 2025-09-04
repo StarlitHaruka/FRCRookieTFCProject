@@ -62,16 +62,16 @@ public class Shooting implements Logged{
   private final Pivot pivot;
   private final Drive drive;
 
-  public Shooting(Shooter shooter, Feeder feeder, Pivot pivot, Drive drive) {
+  public Shooting(Shooter shooter, Pivot pivot, Feeder feeder, Drive drive) {
 
     this.shooter = shooter;
     this.feeder = feeder;
     this.pivot = pivot;
     this.drive = drive;
 
-    shotVelLookup.put(null, null);
-    shotVelLookup.put(null, null);
-    shotVelLookup.put(null, null);
+    shotVelLookup.put(0.0, 300.0);
+    shotVelLookup.put(1.0, 450.0);
+    shotVelLookup.put(4.0, MAX_VELOCITY.in(RadiansPerSecond));
 
   }
 
@@ -79,8 +79,7 @@ public class Shooting implements Logged{
    * ok bunch of notes to interpret
    */
 
-
-  /**
+/**
    * winds the shooter BEFORE the note is fed
    * @param desiredVel
    * @return a command shooting the note at the desiredVel
@@ -135,13 +134,47 @@ public class Shooting implements Logged{
       () -> rotationalVelFromNoteVel(calcNoteVel()));
   }
 
+  public Command Aim() {
+    return pivot.runPivot(() -> pitchFromNoteVel(calcNoteVel()));
+  }
+
+    /**
+   * Shoots while driving at a manually inputted translational velocity.
+   *
+   * @param vx The field relative x velocity to drive in.
+   * @param vy The field relative y velocity to drive in.
+   * @return A command to shote while moving.
+   */
+  public Command shootWhileDriving(InputStream vx, InputStream vy) {
+    return shoot(
+            () -> rotationalVelFromNoteVel(calcNoteVel()),
+            () ->
+                pivot.atPos(pitchFromNoteVel(calcNoteVel()))
+                    && atYaw(yawFromNoteVel(calcNoteVel())))
+        .deadlineFor(
+            drive.drive(
+                vx.scale(0.5),
+                vy.scale(0.5),
+                () -> yawFromNoteVel(calcNoteVel(Seconds.of(0.2)))),
+            pivot.runPivot(() -> pitchFromNoteVel(calcNoteVel())));
+  }
+
+
+  public static Pose2d robotPoseFacingSpeaker(Translation2d robotTranslation) {
+    return new Pose2d(
+        robotTranslation,
+        translationToSpeaker(robotTranslation)
+            .getAngle()
+            .plus(Rotation2d.fromRadians(Math.PI / 2)));
+  }
+  
   public Vector<N3> calcNoteVel() {
     return calcNoteVel(drive.pose());
   }
 
   public Vector<N3> calcNoteVel(Time predictionTime) {
     return calcNoteVel(
-      predictedPose(drive.pose(), drive.getFieldRelChassisSpeed(), predictionTime)
+      predictedPose(drive.pose(), drive.getFieldRelChassisSpeeds(), predictionTime)
     );
   }
 
@@ -152,7 +185,7 @@ public class Shooting implements Logged{
    * @return A 3d vector representing the desired note initial velocity.
    */
   public Vector<N3> calcNoteVel(Pose2d robotPose) {
-    ChassisSpeeds speeds = drive.getFieldRelChassisSpeed();
+    ChassisSpeeds speeds = drive.getFieldRelChassisSpeeds();
     Vector<N3> robotVelocity =
         VecBuilder.fill(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, 0);
     Translation2d difference = translationToSpeaker(robotPose.getTranslation());
@@ -161,7 +194,7 @@ public class Shooting implements Logged{
         new Rotation3d(
             0,
             -calculateStationaryPitch(
-                robotPoseFacingSpeaker(robotPose.getTranslation()), shotVelocity, pivot.position()),
+                robotPoseFacingSpeaker(robotPose.getTranslation()), shotVelocity, pivot.pos()),
             difference.getAngle().getRadians());
     // rotate unit forward vector by note orientation and scale by our shot velocity
     Vector<N3> noteVelocity =
@@ -191,13 +224,14 @@ public class Shooting implements Logged{
    * returns the current pose of the shooter
    * @return
    */
+  @Log.NT
   public Pose3d shooterPose() {
     return new Pose3d(drive.pose())
     .transformBy(pivot.transform())
     .transformBy(PivotConstants.SHOOTER_FROM_AXLE);
   }
 
-  public Pose3d shooterPose(Transform3d pivot, Pose2d robot) {
+  public static Pose3d shooterPose(Transform3d pivot, Pose2d robot) {
     return new Pose3d(robot)
     .transformBy(pivot)
     .transformBy(PivotConstants.SHOOTER_FROM_AXLE);
@@ -208,13 +242,14 @@ public class Shooting implements Logged{
    * checks if the robot can currently make a shot 
    * @return
    */
+  @Log.NT
   public boolean inRange() {
     Vector<N3> shot = calcNoteVel();
     double pitch = pitchFromNoteVel(shot);
     return MIN_ANGLE.in(Radians) < pitch
       && pitch < MAX_ANGLE.in(Radians)
       && Math.abs(rotationalVelFromNoteVel(shot)) < MAX_VELOCITY.in(RadiansPerSecond)
-      && translationToSpeaker(drive.pose().getTranslation()).getNorm < MAX_DISTANCE.in(Meters);
+      && translationToSpeaker(drive.pose().getTranslation()).getNorm() < MAX_DISTANCE.in(Meters);
 
   }
 
@@ -273,7 +308,7 @@ public class Shooting implements Logged{
   }
 
   public static double calculateStationaryVelocity(double distance) {
-    return flywheelToNoteSpeed(shotVelocityLookup.get(distance));
+    return flywheelToNoteSpeed(shotVelLookup.get(distance));
   }
 
     /**

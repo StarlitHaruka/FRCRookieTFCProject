@@ -375,7 +375,7 @@ public class Drive extends SubsystemBase implements Logged, AutoCloseable {
 
   /** Returns the field relative chassis speeds. */
   @Log.NT
-  public ChassisSpeeds getFieldRelativeChassisSpeeds() {
+  public ChassisSpeeds getFieldRelChassisSpeeds() {
     return ChassisSpeeds.fromRobotRelativeSpeeds(getRobotRelativeChassisSpeeds(), heading());
   }
 
